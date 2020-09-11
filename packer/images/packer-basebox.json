@@ -1,0 +1,80 @@
+{
+  "variables": {
+    "aws_access_key": "{{env `AWS_ACCESS_KEY_ID`}}",
+    "aws_secret_key": "{{env `AWS_SECRET_ACCESS_KEY`}}",
+    "region": "us-west-2",
+    "cloud_token": "{{ env `VAGRANT_CLOUD_ACCESS_TOKEN` }}",
+    "version": "1.0.{{timestamp}}"
+},
+  "builders": [
+    {
+      "access_key": "{{user `aws_access_key`}}",
+      "ami_name": "packer-basebox-{{timestamp}}",
+      "instance_type": "t2.micro",
+      "region": "{{user `region`}}",
+      "secret_key": "{{user `aws_secret_key`}}",
+      "source_ami_filter": {
+        "filters": {
+          "virtualization-type": "hvm",
+          "name": "ubuntu/images/*ubuntu-xenial-16.04-amd64-server-*",
+          "root-device-type": "ebs"
+        },
+        "owners": ["099720109477"],
+        "most_recent": true
+      },
+      "ssh_username": "ubuntu",
+      "type": "amazon-ebs"
+      }
+      ],
+  "provisioners": [
+      {
+      "type": "file",
+      "source": "../packer-basebox-motd.txt",
+      "destination": "/home/ubuntu/"
+      },
+      {
+      "type": "file",
+      "source": "../UbuntuLTS.pub",
+      "destination": "/tmp/UbuntuLTS.pub"
+      },
+      {
+      "type": "shell",
+      "inline": ["ls -al /home/ubuntu", "cat /home/ubuntu/packer-basebox-motd.txt"]
+      },
+      {
+      "type": "shell",
+      "script": "../scripts/setup.sh"
+      }],
+    "post-processors": [
+      {
+        "type": "shell-local",
+        "inline": ["echo Doing stuff..."]
+        },
+        {
+          "type": "artifice",
+          "files": ["output-virtualbox-iso/packer-devsecops.vmdk",
+                "output-virtualbox-iso/packer-devsecops.ovf"
+                   ]
+        },
+      {
+            "type": "vagrant",
+            "compression_level": "8",
+            "output": "vagrant-devsecops-{{.Provider}}.box"
+      },
+        {
+          "type": "vagrant",
+          "keep_input_artifact": true,
+          "provider_override": "virtualbox"
+        },
+        {
+          "type": "artifice",
+          "files": ["./packer-devsecops-*.box"]
+        },
+        {
+          "type": "vagrant-cloud",
+          "box_tag": "devsecops/vbox-devsecops",
+          "access_token": "mOlDB6xkjutQJg.atlasv1.ObPGfiEzo31qbynycpjrFp06Ge2ThfpgipbqR6yQFQBwxFT7ffmiykycpyM70uCogHs",
+          "version": "0.1.0"
+        }
+        ]
+}
